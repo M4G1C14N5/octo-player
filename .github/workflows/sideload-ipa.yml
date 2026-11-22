@@ -56,6 +56,8 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/dd" \
+            MARKETING_VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)" \
+            CURRENT_PROJECT_VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist)" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             2>&1 | tee "$RUNNER_TEMP/xcodebuild.log" | grep -E "error:|warning: .*Siri|BUILD (SUCCEEDED|FAILED)" || true
@@ -67,8 +69,8 @@ jobs:
           test -d "$app"
           mkdir -p "$RUNNER_TEMP/pkg/Payload" out
           cp -R "$app" "$RUNNER_TEMP/pkg/Payload/"
-          plutil -p "$app/Info.plist" | head -n 40 || true
-          ver=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Info.plist" 2>/dev/null) || ver=nover
+          ver=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Info.plist")
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$app/Info.plist" >/dev/null
           (cd "$RUNNER_TEMP/pkg" && zip -qry "$GITHUB_WORKSPACE/out/Octo-${ver}-sideload-${GITHUB_SHA::8}-unsigned.ipa" Payload)
           ls -la out; shasum -a 256 out/*.ipa
 
