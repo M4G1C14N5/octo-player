@@ -1,0 +1,82 @@
+# Fork-only (M4G1C14N5/octo-player): builds an UNSIGNED Release Octo.ipa from this branch on a
+# GitHub-hosted Mac, for free-Apple-ID sideloading (scripts/sideload/free-resign.sh, then
+# plumesign on claw-server). Linux builds need Xcode.xip, which sits behind an Apple browser login.
+# Not for upstream. Runs on pushes to sideload/** branches or by hand.
+name: sideload ipa
+
+on:
+  push:
+    branches: ["sideload/**"]
+    paths: ["ios/**", ".github/workflows/sideload-ipa.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Newest Xcode 27
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          app=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -n 1)
+          [ -n "$app" ] || app=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -n 1)
+          [ -n "$app" ] || { echo "::error::no Xcode 27 on this runner"; exit 1; }
+          sudo xcode-select -s "$app"
+          xcodebuild -version
+          swift --version
+
+      - name: XcodeGen 2.46.0
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip
+          echo "4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP/xcodegen"
+          bin=$(find "$RUNNER_TEMP/xcodegen" -type f -name xcodegen -perm -u+x | head -n 1)
+          test -n "$bin"
+          dirname "$bin" >> "$GITHUB_PATH"
+
+      - name: Make the Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build, unsigned, Release
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Octo.xcodeproj \
+            -scheme Octo \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee "$RUNNER_TEMP/xcodebuild.log" | grep -E "error:|warning: .*Siri|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" "$RUNNER_TEMP/xcodebuild.log"
+
+      - name: Package Octo.ipa
+        run: |
+          app="$RUNNER_TEMP/dd/Build/Products/Release-iphoneos/Octo.app"
+          test -d "$app"
+          mkdir -p "$RUNNER_TEMP/pkg/Payload" out
+          cp -R "$app" "$RUNNER_TEMP/pkg/Payload/"
+          ver=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Info.plist")
+          (cd "$RUNNER_TEMP/pkg" && zip -qry "$GITHUB_WORKSPACE/out/Octo-${ver}-sideload-${GITHUB_SHA::8}-unsigned.ipa" Payload)
+          ls -la out; shasum -a 256 out/*.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: octo-sideload-ipa
+          path: out/*.ipa
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: xcodebuild-log
+          path: ${{ runner.temp }}/xcodebuild.log
+          if-no-files-found: ignore
