@@ -20,12 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Newest Xcode 27
+      # Upstream builds on a self-hosted xcode-27 runner. Hosted macos-26 images (Nov 2026) top out
+      # at Xcode 26.x, which is enough here: Swift tools 6.0 and an iOS 26.0 deployment target.
+      - name: Newest Xcode (27 if present, else 26)
         run: |
           ls -d /Applications/Xcode*.app || true
-          app=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -n 1)
-          [ -n "$app" ] || app=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -n 1)
-          [ -n "$app" ] || { echo "::error::no Xcode 27 on this runner"; exit 1; }
+          pick() { ls -d /Applications/Xcode_$1*.app 2>/dev/null | grep -v -i beta | sort -V | tail -n 1; }
+          app=$(pick 27); [ -n "$app" ] || app=$(pick 26)
+          [ -n "$app" ] || { echo "::error::no Xcode 26 or 27 on this runner"; exit 1; }
+          case "$app" in *Xcode_26*) echo "::warning::Xcode 27 not on this runner; building with $app";; esac
           sudo xcode-select -s "$app"
           xcodebuild -version
           swift --version
