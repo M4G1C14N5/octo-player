@@ -67,7 +67,8 @@ jobs:
           test -d "$app"
           mkdir -p "$RUNNER_TEMP/pkg/Payload" out
           cp -R "$app" "$RUNNER_TEMP/pkg/Payload/"
-          ver=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Info.plist")
+          plutil -p "$app/Info.plist" | head -n 40 || true
+          ver=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Info.plist" 2>/dev/null) || ver=nover
           (cd "$RUNNER_TEMP/pkg" && zip -qry "$GITHUB_WORKSPACE/out/Octo-${ver}-sideload-${GITHUB_SHA::8}-unsigned.ipa" Payload)
           ls -la out; shasum -a 256 out/*.ipa
 
