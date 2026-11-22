@@ -186,8 +186,9 @@ final class WashArtwork {
             return true
         }
         guard drawn else { return nil }
-        return (0..<(side * side)).map { i in
-            0xFF00_0000 | UInt32(bytes[i * 4]) << 16 | UInt32(bytes[i * 4 + 1]) << 8 | UInt32(bytes[i * 4 + 2])
+        return (0..<(side * side)).map { (i: Int) -> UInt32 in
+            let r: UInt32 = UInt32(bytes[i * 4]) << 16, g: UInt32 = UInt32(bytes[i * 4 + 1]) << 8
+            return 0xFF00_0000 | r | g | UInt32(bytes[i * 4 + 2])
         }
     }
 }
