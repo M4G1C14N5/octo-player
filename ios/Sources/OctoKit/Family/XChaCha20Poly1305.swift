@@ -52,8 +52,10 @@ enum ChaCha20 {
     }
 
     private static func words(_ bytes: [UInt8]) -> [UInt32] {
-        stride(from: 0, to: bytes.count, by: 4).map {
-            UInt32(bytes[$0]) | UInt32(bytes[$0 + 1]) << 8 | UInt32(bytes[$0 + 2]) << 16 | UInt32(bytes[$0 + 3]) << 24
+        stride(from: 0, to: bytes.count, by: 4).map { (i: Int) -> UInt32 in
+            let b0 = UInt32(bytes[i]), b1: UInt32 = UInt32(bytes[i + 1]) << 8
+            let b2: UInt32 = UInt32(bytes[i + 2]) << 16, b3: UInt32 = UInt32(bytes[i + 3]) << 24
+            return b0 | b1 | b2 | b3
         }
     }
 

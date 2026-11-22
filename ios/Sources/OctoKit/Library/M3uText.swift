@@ -233,10 +233,13 @@ private func sharedEnding(_ a: [String], _ b: [String]) -> Int {
 private func byTitleAndArtist(_ title: String, _ artist: String?, _ lengthMs: Int64, _ byTitle: [String: [M3uSong]]) -> String? {
     let versions = versionOf(title)
     var seen = Set<String>()
-    let candidates = titleKeys(title).flatMap { byTitle[$0] ?? [] }
-        .filter { seen.insert($0.id).inserted }
-        .filter { versionOf($0.title) == versions }
-        .filter { lengthMs <= 0 || $0.durationMs <= 0 || abs(lengthMs - $0.durationMs) <= sameLengthMs }
+    let pooled: [M3uSong] = titleKeys(title).flatMap { (key: String) -> [M3uSong] in byTitle[key] ?? [] }
+    let candidates: [M3uSong] = pooled.filter { (song: M3uSong) -> Bool in
+        guard seen.insert(song.id).inserted, versionOf(song.title) == versions else { return false }
+        if lengthMs <= 0 || song.durationMs <= 0 { return true }
+        let gap: Int64 = abs(lengthMs - song.durationMs)
+        return gap <= sameLengthMs
+    }
     if let artist, !artist.trimmingCharacters(in: .whitespaces).isEmpty {
         return candidates.first { sameArtist(artist, $0.artist) && SongIdentity.sameTitle(title, $0.title).isSame }?.id
             ?? candidates.first { sameArtist(artist, $0.artist) }?.id
