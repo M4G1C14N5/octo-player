@@ -387,12 +387,11 @@ Step B — Re-sign with the saved free Apple ID and install over Wi-Fi (as \`sid
   (Or to export a signed .ipa without installing, drop --register-and-install and
    --udid, and pass -o /path/to/Octo-signed.ipa.)
 
-IMPORTANT CAVEAT FOR OCTO 1.13.0 PRE-BUILT BINARY:
-  See scripts/sideload/README.md ("Known Octo 1.13.0 Launch Caveat"). In Octo
-  1.13.0, SiriAccess.askWhenReady() calls INPreferences.siriAuthorizationStatus()
-  before checking ProvisioningProfile.grants().contains("com.apple.developer.siri").
-  Signing/install succeeds cleanly, but launching the unmodified 1.13.0 Mach-O
-  binary without the Siri entitlement still aborts in Intents.framework unless
-  Octo is rebuilt from source with those guard clauses swapped or patched with a
-  tweak dylib (-t).
+NOTE ON OCTO 1.13.0 BINARY:
+  The unmodified upstream Octo-1.13.0-iPhone.ipa aborts at launch without the
+  Siri entitlement because SiriAccess.askWhenReady() called
+  INPreferences.siriAuthorizationStatus() before checking
+  ProvisioningProfile.grants(). Rebuild the IPA from this patched branch on
+  Linux with xtool (see scripts/sideload/README.md, "Step 1: Build the Patched
+  .ipa on Linux") before running this script + plumesign.
 EOF

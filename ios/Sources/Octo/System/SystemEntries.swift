@@ -262,12 +262,14 @@ final class OctoAppDelegate: NSObject, UIApplicationDelegate, UNUserNotification
 
     /// "Play Drake in Octo" asked of Siri, in the car too, is answered by the app itself.
     func application(_ application: UIApplication, handlerFor intent: INIntent) -> Any? {
-        intent is INPlayMediaIntent ? SiriMediaHandler() : nil
+        guard ProvisioningProfile.grants().contains("com.apple.developer.siri") else { return nil }
+        return intent is INPlayMediaIntent ? SiriMediaHandler() : nil
     }
 
     /// Siri hands the request over to play, with the app started in the background if need be.
     func application(_ application: UIApplication, handle intent: INIntent, completionHandler: @escaping (INIntentResponse) -> Void) {
-        guard let intent = intent as? INPlayMediaIntent, let actions = SystemActions.shared else {
+        guard ProvisioningProfile.grants().contains("com.apple.developer.siri"),
+              let intent = intent as? INPlayMediaIntent, let actions = SystemActions.shared else {
             completionHandler(INPlayMediaIntentResponse(code: .failure, userActivity: nil))
             return
         }

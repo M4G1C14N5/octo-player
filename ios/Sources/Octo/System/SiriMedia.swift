@@ -39,8 +39,9 @@ enum SiriAccess {
     private static var observer: NSObjectProtocol?
 
     static func askWhenReady(library: Library?) {
-        guard observer == nil, INPreferences.siriAuthorizationStatus() == .notDetermined,
-              ProvisioningProfile.grants().contains("com.apple.developer.siri") else { return }
+        guard observer == nil,
+              ProvisioningProfile.grants().contains("com.apple.developer.siri"),
+              INPreferences.siriAuthorizationStatus() == .notDetermined else { return }
         observer = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { ask(library) }
         }
